@@ -1,0 +1,139 @@
+#include <Arduino.h>
+
+#if defined(ESP32) || defined(ARDUINO_RASPBERRY_PI_PICO_W)
+  #include <WiFi.h>
+#elif defined(ESP8266)
+  #include <ESP8266WiFi.h>
+#elif __has_include(<WiFiNINA.h>)
+  #include <WiFiNINA.h>
+#elif __has_include(<WiFi101.h>)
+  #include <WiFi101.h>
+#elif __has_include(<WiFiS3.h>)
+  #include <WiFiS3.h>
+#endif
+
+#include <Firebase_ESP_Client.h>
+#include <addons/TokenHelper.h>  // For tokenStatusCallback
+
+// ---------------- Wi-Fi ----------------
+#define WIFI_SSID      "PANDEY HOME"
+#define WIFI_PASSWORD  "pandeyhome1"
+
+// ---------------- Firebase ----------------
+#define FIREBASE_HOST     "smart-parking-system-3706c-default-rtdb.asia-southeast1.firebasedatabase.app"
+#define FIREBASE_API_KEY  "AIzaSyAbP4ha6KeJZz3CLRF3mMjesxsMwi4ku-w"
+#define FIREBASE_USER     "adarshjpandey@gmail.com"
+#define FIREBASE_PASSWORD "@Aadarsh03"
+
+// ---------------- IR Sensor Pins ----------------
+#define IR_SENSOR_1 14 // D5
+#define IR_SENSOR_2 12 // D6
+#define IR_SENSOR_3 13 // D7
+#define IR_SENSOR_4 15 // D8
+
+#define PARKING_SPOT_1 "A1"
+#define PARKING_SPOT_2 "A2"
+#define PARKING_SPOT_3 "A3"
+#define PARKING_SPOT_4 "A4"
+
+#define DEBOUNCE_DELAY_MS 500 // 5 seconds debounce
+
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+int lastSensorState[4] = {HIGH, HIGH, HIGH, HIGH};
+unsigned long lastDebounceTime[4] = {0, 0, 0, 0};
+int currentReading[4];
+
+struct ParkingSpot {
+  int pin;
+  String id;
+  int index;
+};
+
+ParkingSpot spots[] = {
+  {IR_SENSOR_1, PARKING_SPOT_1, 0},
+  {IR_SENSOR_2, PARKING_SPOT_2, 1},
+  {IR_SENSOR_3, PARKING_SPOT_3, 2},
+  {IR_SENSOR_4, PARKING_SPOT_4, 3}
+};
+
+// ---------------- Connect Wi-Fi ----------------
+void connectWiFi() {
+  Serial.print("Connecting to Wi-Fi: ");
+  Serial.println(WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println("\n✅ Wi-Fi Connected!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+
+// ---------------- Update Spot ----------------
+void updateSpot(String spotID, int sensorValue) {
+  String status = (sensorValue == LOW) ? "OCCUPIED" : "EMPTY";
+  String basePath = "/parking_spots/" + spotID;
+
+  if (Firebase.RTDB.setString(&fbdo, basePath + "/status", status))
+    Serial.printf("✅ Updated %s → %s\n", spotID.c_str(), status.c_str());
+  else
+    Serial.printf("❌ Failed %s: %s\n", spotID.c_str(), fbdo.errorReason().c_str());
+
+  // Reset booking if spot is now empty
+  if (status == "EMPTY") {
+    Firebase.RTDB.setString(&fbdo, basePath + "/booked", "NO");
+    Firebase.RTDB.deleteNode(&fbdo, "/bookings/" + spotID);
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("\n--- Smart Parking System ---");
+
+  connectWiFi();
+
+  // Firebase config
+  config.api_key = FIREBASE_API_KEY;
+  config.database_url = FIREBASE_HOST;
+  config.token_status_callback = tokenStatusCallback;
+
+  auth.user.email = FIREBASE_USER;
+  auth.user.password = FIREBASE_PASSWORD;
+
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+
+  // Initialize sensors & push initial state
+  for (int i = 0; i < 4; i++) {
+    pinMode(spots[i].pin, INPUT);
+    currentReading[i] = digitalRead(spots[i].pin);
+    lastSensorState[i] = currentReading[i];
+    updateSpot(spots[i].id, lastSensorState[i]);
+  }
+
+  Serial.println("🚗 IR Sensors Ready (A1–A4)");
+}
+
+void loop() {
+  if (Firebase.ready()) {
+    for (int i = 0; i < 4; i++) {
+      int reading = digitalRead(spots[i].pin);
+
+      if (reading != currentReading[i])
+        lastDebounceTime[i] = millis();
+
+      if ((millis() - lastDebounceTime[i]) > DEBOUNCE_DELAY_MS) {
+        if (reading != lastSensorState[i]) {
+          lastSensorState[i] = reading;
+          updateSpot(spots[i].id, lastSensorState[i]);
+        }
+      }
+
+      currentReading[i] = reading;
+    }
+  }
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Fake Payment Gateway</title>
+<style>
+body{font-family:Segoe UI,Arial;background:#111;color:#fff;padding:20px}
+.card{max-width:600px;margin:30px auto;background:#222;padding:20px;border-radius:10px;text-align:center;}
+button{padding:12px 20px;border:none;border-radius:8px;background:#00c6ff;color:#000;font-weight:bold;cursor:pointer;}
+button:hover{background:#00a0d4;}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>Fake Payment Gateway (Demo)</h2>
+<p>Slot: <span id="slot"></span></p>
+<p>Vehicle: <span id="vehicle"></span></p>
+<p>Amount to pay: ₹<span id="amount"></span></p>
+<button id="pay-btn">Pay Now</button>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const slot = params.get('slot');
+const vehicle = params.get('vehicle');
+const start = params.get('start');
+const end = params.get('end');
+const amount = params.get('amount');
+
+document.getElementById('slot').innerText = slot;
+document.getElementById('vehicle').innerText = vehicle;
+document.getElementById('amount').innerText = amount;
+
+document.getElementById('pay-btn').onclick = ()=>{
+  const txId = "TX"+Date.now();
+  const returnUrl = `result.html?tx=${txId}&status=SUCCESS&slot=${slot}&vehicle=${vehicle}&start=${start}&end=${end}&amount=${amount}`;
+  window.location.href = returnUrl;
+};
+</script>
+</body>
+</html>

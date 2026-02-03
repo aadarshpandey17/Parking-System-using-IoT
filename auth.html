@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SmartPark - Login/Sign Up</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<style>
+  body.auth-page {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #000;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    padding: 12px 30px;
+    background: #000;
+    color: #fff;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .logo img { height: 45px; border-radius: 6px; vertical-align: middle; }
+
+  .tagline {
+    font-size: 1em;
+    font-weight: 600;
+    color: #bbb;
+    flex: 1;
+    text-align: center;
+  }
+
+  nav ul { list-style: none; display: flex; gap: 20px; margin:0; padding:0; flex-wrap: wrap; }
+  nav ul li a { text-decoration:none; color:#fff; font-size: 1.1em; font-weight: 500; transition:0.3s; }
+  nav ul li a:hover { color: #ff4da6; }
+
+  /* Container */
+  .auth-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.1px 20px;
+  }
+
+  /* Login box */
+  .form-section {
+    background: linear-gradient(135deg,#ff4da6,#ff9933,#00c6ff,#8e44ad);
+    background-size: 400% 400%;
+    animation: gradientShift 10s ease infinite;
+    padding: 35px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 0 25px rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  @keyframes gradientShift {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+  }
+
+  .input-group { margin: 15px 0; text-align:left; }
+  .input-group label { font-size:0.9em; display:block; margin-bottom:5px; }
+  .input-group input {
+    width: 100%; padding: 10px; border-radius: 8px; border: none;
+    outline: none; font-size: 1em;
+  }
+
+  /* Buttons */
+  .button-group { display: flex; flex-direction: column; gap: 12px; margin: 20px 0; }
+  .main-btn, .secondary-btn, .google-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 25px;
+    border: none;
+    font-weight:bold;
+    font-size: 1em;
+    cursor:pointer;
+    transition: 0.3s;
+  }
+  .main-btn { background:#111; color:#fff; }
+  .secondary-btn { background:#333; color:#fff; }
+  .main-btn:hover, .secondary-btn:hover { background:#000; }
+
+  .google-btn {
+    background:#fff; color:#444;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .google-btn img { height:20px; margin-right:8px; }
+
+  .status-message { margin-bottom:15px; font-size:0.9em; font-weight:bold; }
+  .status-error { color:#ff4d4d; }
+  .status-success { color:#4dff88; }
+
+  .back-link { margin-top:20px; }
+  .back-link a { color:#fff; text-decoration:underline; }
+</style>
+</head>
+<body class="auth-page fade-in">
+
+<header>
+  <a href="index.html" class="logo"><img src="images/logo.jpeg" alt="SmartPark Logo"/></a>
+  <div class="tagline">Your Smart Parking Partner</div>
+  <nav>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="auth.html">Login</a></li>
+      <li><a href="booking.html">App</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="auth-container">
+  <h1>Welcome Back!</h1>
+  <p class="auth-intro">Sign in or create an account to manage your parking spots.</p>
+
+  <div class="form-section">
+    <div id="auth-status" class="status-message"></div>
+
+    <h3>Login / Create Account</h3>
+    <div class="input-group">
+      <label for="email-input">Email:</label>
+      <input type="email" id="email-input" placeholder="your@example.com"/>
+    </div>
+    <div class="input-group">
+      <label for="password-input">Password:</label>
+      <input type="password" id="password-input" placeholder="******"/>
+    </div>
+
+    <div class="button-group">
+      <button id="email-signin-btn" class="main-btn">Login</button>
+      <button id="email-signup-btn" class="secondary-btn">Sign Up</button>
+      <button id="google-signin-btn" class="google-btn">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon"/>
+        Sign In with Google
+      </button>
+      <button id="anon-signin-btn" class="secondary-btn">Continue as Guest</button>
+    </div>
+  </div>
+
+  <p class="back-link"><a href="index.html">← Back to Home</a></p>
+</div>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAbP4ha6KeJZz3CLRF3mMjesxsMwi4ku-w",
+    authDomain: "smart-parking-system-3706c.firebaseapp.com",
+    databaseURL: "https://smart-parking-system-3706c-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "smart-parking-system-3706c",
+    storageBucket: "smart-parking-system-3706c.firebasestorage.app",
+    messagingSenderId: "865604086970",
+    appId: "1:865604086970:web:eef7c292c097b2414f6683",
+    measurementId: "G-78GQPXRFLC"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  const emailInput = document.getElementById("email-input");
+  const passwordInput = document.getElementById("password-input");
+  const statusDiv = document.getElementById("auth-status");
+
+  function showMessage(message, type="") {
+    statusDiv.textContent = message;
+    statusDiv.className = "status-message " + (type ? "status-" + type : "");
+  }
+function redirectAfterLogin() {
+  const user = auth.currentUser;
+  if (user && user.email === "smartpark@gmail.com") {
+    // Admin email → redirect to admin dashboard
+    window.location.href = "admin.html";
+  } else {
+    // Regular user → normal booking page
+    window.location.href = "booking.html";
+  }
+}
+
+
+
+  document.getElementById("email-signin-btn").addEventListener("click", () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    if (!email || !password) return showMessage("Please fill all fields","error");
+
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => redirectAfterLogin())
+      .catch(err => showMessage(err.message,"error"));
+  });
+
+  document.getElementById("email-signup-btn").addEventListener("click", () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    if (!email || !password) return showMessage("Please fill all fields","error");
+
+    auth.createUserWithEmailAndPassword(email, password)
+      .then(() => redirectAfterLogin())
+      .catch(err => showMessage(err.message,"error"));
+  });
+
+  document.getElementById("google-signin-btn").addEventListener("click", () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .then(() => redirectAfterLogin())
+      .catch(err => showMessage(err.message,"error"));
+  });
+
+  document.getElementById("anon-signin-btn").addEventListener("click", () => {
+    auth.signInAnonymously()
+      .then(() => redirectAfterLogin())
+      .catch(err => showMessage(err.message,"error"));
+  });
+</script>
+</body>
+</html>

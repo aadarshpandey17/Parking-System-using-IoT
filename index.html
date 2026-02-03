@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SMART PARK - Home</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Segoe UI",sans-serif; background:#111; color:#f0f0f0; overflow-x:hidden; }
+
+  /* Header */
+  header { background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); position: sticky; top:0; z-index:1000; padding:12px 40px; }
+  .header-container { display:flex; justify-content:space-between; align-items:center; max-width:1200px; margin:0 auto; gap:20px; }
+  .logo img { height:50px; width:auto; cursor:pointer; transition:0.3s; }
+  .logo img:hover { transform: scale(1.05); }
+  .tagline { flex:1; text-align:center; font-size:1.2em; font-weight:600; color:#D3D3D3; letter-spacing:1px; }
+  nav ul { list-style:none; display:flex; gap:25px; }
+  nav ul li a { color:#fff; text-decoration:none; font-size:1.1em; position:relative; }
+  nav ul li a:hover { color:#ff9933; }
+  nav ul li a::after { content:""; position:absolute; left:0; bottom:-5px; width:0; height:2px; background: linear-gradient(90deg,#ff4da6,#ff9933,#00c6ff); transition:width 0.3s; }
+  nav ul li a:hover::after { width:100%; }
+
+  /* Hero Section */
+  .hero { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:50px 20px; background:#111; }
+  .hero-content { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; max-width:1200px; gap:40px; }
+  .hero-text { flex:1; min-width:300px; }
+  .hero-text h1 { font-size:3em; margin-bottom:20px; color:#fff; }
+  .hero-text p { font-size:1.2em; margin-bottom:30px; line-height:1.6; color:#ccc; }
+  .btn { display:inline-block; padding:14px 32px; font-size:1.1em; background: linear-gradient(90deg,#ff4da6,#ff9933,#00c6ff); border-radius:30px; color:#fff; text-decoration:none; transition: transform 0.3s ease, box-shadow 0.3s ease; background-size:200% auto; }
+  .btn:hover { transform: translateY(-5px); box-shadow:0 8px 25px rgba(255,77,166,0.5); }
+  .hero-image { flex:1; min-width:280px; text-align:center; }
+  .hero-image img { max-width:70%; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); transition: transform 0.5s ease; }
+  .hero-image img:hover { transform: scale(1.05) rotate(2deg); }
+
+  /* Section Separators */
+  section { padding:60px 20px; max-width:1200px; margin:auto; }
+  section h2 { font-size:2.5em; color:#ff9933; margin-bottom:30px; text-align:center; }
+
+  /* About Us */
+  .about-content { display:flex; flex-wrap:wrap; align-items:center; gap:40px; }
+  .about-text { flex:1; min-width:300px; line-height:1.6; color:#ccc; }
+  .about-text p { margin-bottom:15px; font-size:1.1em; }
+  .about-image { flex:1; min-width:280px; text-align:center; }
+  .about-image img { max-width:100%; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+
+  /* User Reviews */
+  #review-form-container {
+    max-width: 600px;
+    margin: 0 auto 50px auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+    background: #1a1a1a;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+  }
+  #review-form-container input,
+  #review-form-container select {
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1em;
+    width: 100%;
+    background: #222;
+    color: #fff;
+  }
+  #review-form-container button {
+    padding: 12px;
+    font-size: 1em;
+    font-weight: bold;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(90deg,#ff4da6,#ff9933,#00c6ff);
+    color: #fff;
+    transition: 0.3s;
+  }
+  #review-form-container button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255,77,166,0.5);
+  }
+
+  /* === Horizontal slide container === */
+  .reviews-slider {
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    gap: 20px;
+    padding-bottom: 10px;
+  }
+  .reviews-slider::-webkit-scrollbar {
+    height: 8px;
+  }
+  .reviews-slider::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+  }
+
+  .review-card {
+    background:#222;
+    padding:25px 20px;
+    border-radius:15px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.5);
+    text-align:center;
+    flex:0 0 250px;      /* fixed width for sliding */
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    transition: transform 0.3s;
+  }
+  .review-card:hover { transform: translateY(-5px); }
+  .review-card img {
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    margin-bottom:15px;
+    object-fit:cover;
+    border:2px solid #fff;
+  }
+  .review-card p { margin-bottom:10px; color:#ccc; line-height:1.4; }
+
+  /* Contact Form */
+  .contact-form { max-width:600px; margin:auto; display:flex; flex-direction:column; gap:15px; }
+  .contact-form input, .contact-form textarea { padding:12px; border-radius:8px; border:none; width:100%; font-size:1em; }
+  .contact-form button { background:#00c6ff; color:#000; font-weight:bold; padding:12px; border-radius:10px; border:none; cursor:pointer; transition:0.3s; }
+  .contact-form button:hover { background:#00a0d4; }
+
+  /* Footer */
+  footer { background:#000; padding:30px 20px; color:#ccc; margin-top:50px; text-align:center; }
+  footer h4 { color:#fff; margin-bottom:10px; }
+  footer p { margin:5px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-container">
+    <a href="index.html" class="logo"><img src="images/logo.jpeg" alt="Smart Park Logo"/></a>
+    <span class="tagline">Your Smart Parking Partner</span>
+    <nav>
+      <ul>
+        <li><a href="#about-us">About Us</a></li>
+        <li><a href="#contact-us">Contact Us</a></li>
+        <li><a href="auth.html">Login</a></li>
+        <li><a href="booking.html">App</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-text">
+      <h1>Smart Parking Booking System</h1>
+      <p>Book your parking spot in advance and avoid the hassle of searching. Our intelligent system helps you find, reserve, and manage parking spaces in real time.</p>
+      <a href="auth.html" class="btn">🚀 Get Started / Login</a>
+    </div>
+    <div class="hero-image">
+      <img src="images/banner.jpg" alt="Parking Banner"/>
+    </div>
+  </div>
+</section>
+
+<!-- About Us Section -->
+<section id="about-us" style="background:#1a1a1a;">
+  <h2>About Us</h2>
+  <div class="about-content">
+    <div class="about-text">
+      <p>Smart Park is your intelligent parking solution. We combine real-time data, IoT sensors, and a user-friendly app to help drivers find and reserve parking quickly and efficiently.</p>
+      <p>Our mission is to reduce traffic congestion, save fuel, and enhance convenience for every driver. With years of experience in smart city solutions, we focus on reliability, speed, and security.</p>
+      <p>We constantly innovate with predictive analytics, smart technologies, and intuitive interfaces to deliver the best parking experience.</p>
+    </div>
+    <div class="about-image">
+      <img src="images/park.png" alt="About Us Image"/>
+    </div>
+  </div>
+</section>
+
+<!-- User Reviews Section -->
+<section id="user-reviews">
+  <h2>User Reviews</h2>
+
+  <!-- Review Form for Logged-in Users -->
+  <div id="review-form-container" style="display:none;">
+    <input type="text" id="review-text" placeholder="Write your review...">
+    <select id="review-rating">
+      <option value="">Select Rating</option>
+      <option value="5">⭐⭐⭐⭐⭐ 5</option>
+      <option value="4">⭐⭐⭐⭐ 4</option>
+      <option value="3">⭐⭐⭐ 3</option>
+      <option value="2">⭐⭐ 2</option>
+      <option value="1">⭐ 1</option>
+    </select>
+    <button id="submit-review">Submit Review</button>
+    <p id="review-msg" style="color:#ff9933; text-align:center;"></p>
+  </div>
+
+  <!-- Slider container -->
+  <div class="reviews-slider" id="reviews-grid">
+    <!-- Demo Reviews -->
+    <div class="review-card">
+      <img src="images/rahul.jpeg" alt="Rahul S.">
+      <p>"Smart Park made my city commute so much easier! Always find a spot when I need it."</p>
+      <p><strong>– Rahul S.</strong></p>
+      <p>⭐⭐⭐⭐⭐</p>
+    </div>
+    <div class="review-card">
+      <img src="images/priya.png" alt="Priya K.">
+      <p>"The booking system is seamless and real-time updates are amazing."</p>
+      <p><strong>– Priya K.</strong></p>
+      <p>⭐⭐⭐⭐⭐</p>
+    </div>
+    <div class="review-card">
+      <img src="images/ankit.webp" alt="Ankit M.">
+      <p>"Great app for busy people. I save so much time every day!"</p>
+      <p><strong>– Ankit M.</strong></p>
+      <p>⭐⭐⭐⭐⭐</p>
+    </div>
+    <!-- New Firebase reviews will append here -->
+  </div>
+</section>
+
+<!-- Contact Us Section -->
+<section id="contact-us" style="background:#1a1a1a;">
+  <h2>Contact Us</h2>
+  <form id="contact-form" class="contact-form">
+    <input type="text" id="name" placeholder="Your Name" required>
+    <input type="email" id="email" placeholder="Your Email" required>
+    <textarea id="message" placeholder="Your Message" rows="5" required></textarea>
+    <button type="submit">Send Message</button>
+    <p id="contact-msg" style="color:#ff9933;"></p>
+  </form>
+</section>
+
+<script>
+  // Firebase initialization
+  const firebaseConfig = {
+    apiKey: "AIzaSyAbP4ha6KeJZz3CLRF3mMjesxsMwi4ku-w",
+    authDomain: "smart-parking-system-3706c.firebaseapp.com",
+    databaseURL: "https://smart-parking-system-3706c-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "smart-parking-system-3706c",
+    storageBucket: "smart-parking-system-3706c.appspot.com",
+    messagingSenderId: "865604086970",
+    appId: "1:865604086970:web:eef7c292c097b2414f6683"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Contact Form
+  const contactForm = document.getElementById('contact-form');
+  const contactMsg = document.getElementById('contact-msg');
+  contactForm.addEventListener('submit', e=>{
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const message = document.getElementById('message').value.trim();
+    if(!name || !email || !message) return alert('Please fill all fields');
+
+    db.ref('contact_messages').push().set({name,email,message,timestamp:Date.now()})
+      .then(()=>{ contactMsg.textContent="Message sent successfully!"; contactForm.reset(); })
+      .catch(err=>{ contactMsg.textContent="Error sending message"; console.error(err); });
+  });
+
+  // Review Form for Logged-in Users
+  const reviewFormContainer = document.getElementById('review-form-container');
+  const reviewsGrid = document.getElementById('reviews-grid');
+  const reviewsRef = db.ref('reviews');
+
+  firebase.auth().onAuthStateChanged(user=>{
+    reviewFormContainer.style.display = user ? 'flex' : 'none';
+  });
+
+  document.getElementById('submit-review').addEventListener('click', ()=>{
+    const user = firebase.auth().currentUser;
+    const text = document.getElementById('review-text').value.trim();
+    const rating = document.getElementById('review-rating').value;
+    if(!text || !rating) return alert('Please fill review and select rating');
+
+    reviewsRef.push({
+      uid: user.uid,
+      name: user.displayName || user.email,
+      photoURL: user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+      text,
+      rating,
+      timestamp: Date.now()
+    }).then(()=>{
+      document.getElementById('review-msg').textContent = "Review submitted!";
+      document.getElementById('review-text').value = '';
+      document.getElementById('review-rating').value = '';
+    }).catch(err=>{
+      document.getElementById('review-msg').textContent = "Error submitting review";
+      console.error(err);
+    });
+  });
+
+  // Load Firebase reviews dynamically (keeps demo reviews)
+  reviewsRef.on('value', snapshot=>{
+    const data = snapshot.val();
+    if(!data) return;
+    Object.values(data).sort((a,b)=>b.timestamp-a.timestamp).forEach(r=>{
+      const reviewCard = document.createElement('div');
+      reviewCard.className = 'review-card';
+      reviewCard.innerHTML = `
+        <img src="${r.photoURL}" alt="${r.name}">
+        <p>${r.text}</p>
+        <p><strong>– ${r.name}</strong></p>
+        <p>${'⭐'.repeat(r.rating)}</p>
+      `;
+      reviewsGrid.appendChild(reviewCard);
+    });
+  });
+</script>
+
+<!-- Footer -->
+<footer>
+  <div style="max-width:1200px;margin:auto;display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px;">
+    <div>
+      <h4>SMART PARK™</h4>
+      <p>© 2025 Smart Park. All Rights Reserved.</p>
+    </div>
+    <div>
+      <h4>Contact Us</h4>
+      <p>Email: info@smartpark.com</p>
+      <p>Phone: +91 98765 43210</p>
+    </div>
+    <div>
+      <h4>Location</h4>
+      <p>Pillai HOC College Of Engineering And </p>
+      <p> Technology, Rasayni</p>
+    </div>
+  </div>
+  <p style="margin-top:20px;font-size:0.9em;color:#888;">Made with ❤️ by Smart Park Team</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Payment Result</title>
+<style>
+body{font-family:Segoe UI,Arial;background:#111;color:#fff;padding:20px}
+.card{max-width:600px;margin:30px auto;background:#222;padding:20px;border-radius:10px}
+a{color:#00c6ff;text-decoration:none;}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="card">
+<h2>Payment Result (Demo)</h2>
+<p id="status"></p>
+<p><a href="booking.html">Back to Booking</a></p>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAbP4ha6KeJZz3CLRF3mMjesxsMwi4ku-w",
+  authDomain: "smart-parking-system-3706c.firebaseapp.com",
+  databaseURL: "https://smart-parking-system-3706c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "smart-parking-system-3706c",
+  storageBucket: "smart-parking-system-3706c.appspot.com",
+  messagingSenderId: "865604086970",
+  appId: "1:865604086970:web:eef7c292c097b2414f6683"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const params = new URLSearchParams(window.location.search);
+const status = params.get('status');
+const slot = params.get('slot');
+const vehicle = params.get('vehicle');
+const start = Number(params.get('start'));
+const end = Number(params.get('end'));
+const amount = Number(params.get('amount'));
+const tx = params.get('tx');
+
+document.getElementById('status').innerText = `Payment ${status} | Amount: ₹${amount}`;
+
+if(status==="SUCCESS"){
+  const user = auth.currentUser;
+  if(user){
+    db.ref("bookings/"+slot).set({
+      uid: user.uid,
+      name: user.displayName||user.email,
+      vehicle,
+      startTime: start,
+      endTime: end,
+      amount,
+      txId: tx
+    });
+  }
+}
+</script>
+</body>
+</html>

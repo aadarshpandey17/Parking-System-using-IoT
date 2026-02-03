@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartPark - Areas</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+body{ font-family:'Segoe UI'; background:#111; color:#fff; margin:0; }
+header{ background: rgba(0,0,0,0.85); padding:12px 40px; display:flex; justify-content:space-between; align-items:center;}
+.logo img{ height:50px; cursor:pointer;}
+.tagline{ flex:1; text-align:center; color:#D3D3D3; font-weight:600;}
+.user-info{ display:flex; gap:12px; align-items:center;}
+.user-info img{ width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid #fff;}
+.logout-btn{ background:#ff4d4d; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; color:#fff; font-weight:bold;}
+
+main{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; padding:20px;}
+.area-card{ background:#1c1c1c; border-radius:16px; padding:15px; text-align:center; }
+.area-card h2{ margin-bottom:12px; }
+
+.map-container {
+  position: relative;
+  width: 300px;
+  height: 200px;
+  margin: auto;
+  border-radius: 12px;
+}
+
+.slot-box {
+  position: absolute;
+  width: 60px;
+  height: 40px;
+  border-radius: 6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  color:white;
+  cursor:pointer;
+}
+
+.EMPTY{ background:green; }
+.OCCUPIED{ background:red; }
+.BOOKED{ background:orange; }
+
+.slot-A1{ top:20px; left:20px; }
+.slot-A2{ top:20px; right:20px; }
+.slot-A3{ bottom:20px; left:20px; }
+.slot-A4{ bottom:20px; right:20px; }
+.slot-B1{ top:20px; left:20px; }
+.slot-B2{ top:20px; right:20px; }
+.slot-B3{ bottom:20px; left:20px; }
+.slot-B4{ bottom:20px; right:20px; }
+.slot-C1{ top:20px; left:20px; }
+.slot-C2{ top:20px; right:20px; }
+.slot-C3{ bottom:20px; left:20px; }
+.slot-C4{ bottom:20px; right:20px; }
+.slot-D1{ top:20px; left:20px; }
+.slot-D2{ top:20px; right:20px; }
+.slot-D3{ bottom:20px; left:20px; }
+.slot-D4{ bottom:20px; right:20px; }
+
+.area-card select, 
+.area-card input, 
+.area-card button{ width:90%; margin-top:6px; padding:6px; border-radius:6px; border:none; }
+.area-card button{ background:#00c6ff; color:#000; font-weight:bold; cursor:pointer;}
+.area-card button:hover{ background:#00a0d4;}
+.booking-list{ margin-top:6px; text-align:left; font-size:0.85em; color:#ccc; max-height:60px; overflow-y:auto;}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="logo"><img src="images/logo.jpeg" alt="Smart Park Logo"></a>
+  <span class="tagline">Your Smart Parking Partner</span>
+  <div class="user-info">
+    <span id="user-name">Guest</span>
+    <img id="user-photo" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+    <button id="logout-btn" class="logout-btn">Logout</button>
+  </div>
+</header>
+
+<main id="area-container"></main>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAbP4ha6KeJZz3CLRF3mMjesxsMwi4ku-w",
+  authDomain: "smart-parking-system-3706c.firebaseapp.com",
+  databaseURL: "https://smart-parking-system-3706c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "smart-parking-system-3706c",
+  storageBucket: "smart-parking-system-3706c.appspot.com",
+  messagingSenderId: "865604086970",
+  appId: "1:865604086970:web:eef7c292c097b2414f6683"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const areas = {
+  "Behind Diploma Building": ["A1","A2","A3","A4"],
+  "Near Garden": ["B1","B2","B3","B4"],
+  "Near Front Gate": ["C1","C2","C3","C4"],
+  "Near Back Gate": ["D1","D2","D3","D4"]
+};
+
+const areaContainer = document.getElementById("area-container");
+
+// Auth state
+auth.onAuthStateChanged(user=>{
+  if(user){
+    document.getElementById("user-name").textContent = user.displayName || user.email || "Guest";
+    if(user.photoURL) document.getElementById("user-photo").src = user.photoURL;
+  }
+});
+document.getElementById("logout-btn").onclick = ()=> auth.signOut().then(()=> location.href="index.html");
+
+function isValidVehicleNumber(v) {
+  const regex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/i;
+  return regex.test(v.replace(/\s+/g, '').toUpperCase());
+}
+
+// Live slot watcher
+function watchSlot(slot, box, selectEl){
+  db.ref("parking_spots/"+slot+"/status").on("value", snap=>{
+    const sensor = snap.val() || "EMPTY";
+    db.ref("bookings/"+slot).on("value", snap2=>{
+      const bookings = snap2.val();
+      const now = Date.now();
+      let booked = false;
+      if(bookings){
+        Object.values(bookings).forEach(b=>{
+          if(b.startTime <= now && b.endTime >= now) booked=true;
+        });
+      }
+      if(booked) box.className = "slot-box BOOKED slot-"+slot;
+      else if(sensor==="OCCUPIED") box.className = "slot-box OCCUPIED slot-"+slot;
+      else box.className = "slot-box EMPTY slot-"+slot;
+
+      const option = selectEl.querySelector(`option[value=${slot}]`);
+      if(option) option.disabled = booked || sensor==="OCCUPIED";
+    });
+  });
+}
+
+// Render areas
+Object.entries(areas).forEach(([areaName, slots])=>{
+  const areaCard = document.createElement("div");
+  areaCard.className = "area-card";
+  areaCard.innerHTML = `
+    <h2>${areaName}</h2>
+    <div class="map-container"></div>
+    <select class="slot-select">
+      <option value="">Select Slot</option>
+      ${slots.map(s=>`<option value="${s}">${s}</option>`).join("")}
+    </select>
+    <input type="text" placeholder="Vehicle Number" class="vehicle-input">
+    <label>From: <input type="datetime-local" class="start-time"></label>
+    <label>To: <input type="datetime-local" class="end-time"></label>
+    <button>Book Now</button>
+    <div class="booking-list"></div>
+  `;
+  areaContainer.appendChild(areaCard);
+
+  const mapDiv = areaCard.querySelector(".map-container");
+  const selectEl = areaCard.querySelector(".slot-select");
+  const btn = areaCard.querySelector("button");
+  const listEl = areaCard.querySelector(".booking-list");
+
+  slots.forEach(slot=>{
+    const box = document.createElement("div");
+    box.className = "slot-box EMPTY slot-"+slot;
+    box.textContent = slot;
+    mapDiv.appendChild(box);
+    watchSlot(slot, box, selectEl);
+
+    box.onclick = ()=>{
+      if(!box.classList.contains("BOOKED") && !box.classList.contains("OCCUPIED")){
+        selectEl.value = slot;
+      }
+    };
+  });
+
+  btn.onclick = ()=>{
+    const user = auth.currentUser;
+    if(!user){ window.location.href="auth.html"; return; }
+
+    let slot = selectEl.value;
+    if(!slot){ alert("Select a slot"); return; }
+
+    let vehicle = areaCard.querySelector(".vehicle-input").value.trim().toUpperCase();
+    const startTime = areaCard.querySelector(".start-time").value;
+    const endTime = areaCard.querySelector(".end-time").value;
+    const startMs = new Date(startTime).getTime();
+    const endMs = new Date(endTime).getTime();
+
+    if(!vehicle || !startTime || !endTime){ alert("Enter all fields"); return; }
+    if(startMs >= endMs){ alert("End time must be after start"); return; }
+    if(!isValidVehicleNumber(vehicle)){ alert("Invalid vehicle number!"); return; }
+
+    const hours = Math.ceil((endMs-startMs)/3600000);
+    const amount = hours * 50;
+
+    const newBookingRef = db.ref("bookings/"+slot).push();
+    newBookingRef.set({
+      uid: user.uid,
+      name: user.displayName || user.email,
+      vehicle,
+      startTime: startMs,
+      endTime: endMs,
+      amount: amount
+    }).then(()=>{
+      const url = `checkout.html?slot=${slot}&vehicle=${vehicle}&start=${startMs}&end=${endMs}&amount=${amount}`;
+      window.location.href = url;
+    });
+  };
+
+  selectEl.onchange = ()=>{
+    const slot = selectEl.value;
+    if(!slot){ listEl.innerHTML=""; return; }
+    db.ref("bookings/"+slot).on("value", snap=>{
+      const bookings = snap.val();
+      listEl.innerHTML = "";
+      const now = Date.now();
+      if(bookings){
+        Object.values(bookings).forEach(b=>{
+          const remaining = b.endTime - now;
+          if(remaining>0){
+            const h=Math.floor(remaining/3600000);
+            const m=Math.floor((remaining%3600000)/60000);
+            const item = document.createElement("div");
+            item.className="booking-item";
+            item.textContent = `${b.name} (${b.vehicle}) - Free in ${h}h ${m}m`;
+            listEl.appendChild(item);
+          }
+        });
+      }
+    });
+  };
+});
+
+// DEMO BOOKINGS
+function addRandomDemoBookings(){
+  const demoNames = ["Rahul", "Sneha", "Amit", "Neha", "Vikram", "Priya"];
+  const areasDemo = {
+    "B": ["B1","B2","B3","B4"],
+    "C": ["C1","C2","C3","C4"],
+    "D": ["D1","D2","D3","D4"]
+  };
+  const now = Date.now();
+
+  // clear old demo bookings
+  db.ref("bookings").once("value").then(snapshot=>{
+    snapshot.forEach(slotSnap=>{
+      slotSnap.forEach(bookingSnap=>{
+        if(bookingSnap.val().uid==="demo"){
+          bookingSnap.ref.remove();
+        }
+      });
+    });
+  });
+
+  Object.values(areasDemo).forEach(slots=>{
+    const toBook = Math.floor(Math.random()*3) + 1;
+    const shuffled = slots.sort(()=>0.5-Math.random()).slice(0,toBook);
+
+    shuffled.forEach(slot=>{
+      const start = now - Math.floor(Math.random()*3600000*2);
+      const end = start + Math.floor(Math.random()*3600000*3)+3600000;
+      const name = demoNames[Math.floor(Math.random()*demoNames.length)];
+      const demoBookingRef = db.ref("bookings/"+slot).push();
+      demoBookingRef.set({
+        uid: "demo",
+        name: name,
+        vehicle: "DL"+Math.floor(Math.random()*90+10)+"XY"+Math.floor(Math.random()*9999),
+        startTime: start,
+        endTime: end,
+        amount: Math.ceil((end-start)/3600000)*50
+      });
+    });
+  });
+}
+
+addRandomDemoBookings();
+setInterval(addRandomDemoBookings, 5*60*1000); // refresh every 5 mins
+</script>
+</body>
+</html>

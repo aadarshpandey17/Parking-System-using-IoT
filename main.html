@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SMART PARK - Home</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body.home-page {
+      font-family: "Segoe UI", sans-serif;
+      background: #111; /* Black base */
+      color: #f0f0f0;   /* White text */
+      overflow-x: hidden;
+    }
+
+    /* Full-width Header */
+    header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 40px;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      animation: slideDown 1s ease;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 200px;
+    }
+
+    .logo img {
+      height: 70px;
+      width: auto;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    .logo img:hover { transform: scale(1.05) rotate(-3deg); }
+
+    .tagline {
+      font-size: 1.2em;
+      font-weight: 600;
+      color: #ff4da6;
+      letter-spacing: 1px;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      white-space: nowrap;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 25px;
+    }
+    nav ul li a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 1.2em;
+      position: relative;
+      transition: color 0.3s ease;
+    }
+    nav ul li a::after {
+      content: "";
+      position: absolute;
+      left: 0; bottom: -5px;
+      width: 0; height: 2px;
+      background: linear-gradient(90deg,#ff4da6,#ff9933,#00c6ff);
+      transition: width 0.3s ease;
+    }
+    nav ul li a:hover { color: #ff9933; }
+    nav ul li a:hover::after { width: 100%; }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 50px 20px;
+      animation: fadeIn 1.5s ease;
+    }
+    .hero-content {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      max-width: 1200px;
+      gap: 40px;
+    }
+    .hero-text {
+      flex: 1;
+      min-width: 300px;
+      animation: slideFromLeft 1.2s ease;
+    }
+    .hero-text h1 {
+      font-size: 3.2em;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    .hero-text p {
+      font-size: 1.2em;
+      margin-bottom: 30px;
+      line-height: 1.6;
+      color: #ccc;
+    }
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      font-size: 1.2em;
+      background: linear-gradient(90deg,#ff4da6,#ff9933,#00c6ff);
+      border-radius: 30px;
+      color: #fff;
+      text-decoration: none;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      background-size: 200% auto;
+      animation: gradientMove 3s infinite linear;
+    }
+    .btn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(255,77,166,0.5);
+    }
+
+    .hero-image {
+      flex: 1;
+      min-width: 280px;
+      text-align: center;
+      animation: slideFromRight 1.2s ease;
+    }
+    .hero-image img {
+      max-width: 70%;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      transition: transform 0.5s ease;
+    }
+    .hero-image img:hover {
+      transform: scale(1.05) rotate(2deg);
+    }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+    @keyframes slideFromLeft { from { transform: translateX(-50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideFromRight { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes gradientMove { 
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+  </style>
+</head>
+<body class="home-page">
+  <header>
+    <div class="header-left">
+      <!-- Logo -->
+      <a href="index.html" class="logo">
+        <img src="D:/logo.jpeg" alt="SmartPark Logo"/>
+      </a>
+      <!-- Tagline -->
+      <span class="tagline">Your Smart Parking Partner</span>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="auth.html">Login</a></li>
+        <li><a href="booking.html">App</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1>Smart Parking Booking System</h1>
+        <p>
+          Book your parking spot in advance and avoid the hassle of searching.
+          Our intelligent system helps you find, reserve, and manage parking
+          spaces in real time — saving you time, fuel, and stress.
+        </p>
+        <a href="auth.html" class="btn">🚀 Get Started / Login</a>
+      </div>
+      <div class="hero-image">
+        <img src="D:/banner.jpg" alt="Parking illustration"/>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Smart Parking</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <!-- Sidebar -->
+  <div class="flex">
+    <aside class="w-64 h-screen bg-gray-900 text-white fixed">
+      <div class="p-6 text-2xl font-bold border-b border-gray-700 flex justify-between items-center">
+        🚗 Parking Admin
+        <!-- Notification Bell -->
+        <div class="relative">
+          <button id="notif-btn" class="text-white text-xl focus:outline-none">🔔</button>
+          <span id="notif-count" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full px-2 text-xs hidden">0</span>
+          <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-lg text-black z-50">
+            <div id="notif-list" class="p-3 max-h-60 overflow-y-auto text-sm"></div>
+          </div>
+        </div>
+      </div>
+      <nav class="mt-6">
+        <button onclick="showSection('bookings')" class="block w-full text-left px-6 py-3 hover:bg-gray-800">📋 Bookings</button>
+        <button onclick="showSection('contacts')" class="block w-full text-left px-6 py-3 hover:bg-gray-800">📩 Contact Messages</button>
+        <button onclick="showSection('reviews')" class="block w-full text-left px-6 py-3 hover:bg-gray-800">⭐ Reviews</button>
+        <button id="logout-btn" class="block w-full text-left px-6 py-3 hover:bg-red-600">🚪 Logout</button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-64 p-8 w-full">
+      <h1 class="text-3xl font-bold mb-6">Admin Dashboard</h1>
+
+      <!-- Combined Table Layout -->
+      <div class="grid grid-cols-3 gap-6">
+
+        <!-- Contact Messages -->
+        <div class="bg-white shadow rounded-lg p-4">
+          <h2 class="text-xl font-semibold mb-4">📩 Contact Messages</h2>
+          <div class="space-y-4" id="contact-list">
+            <!-- Example Static Entry -->
+            <!-- Entries will be dynamically loaded from Firebase -->
+            <!-- <div><b>John Doe</b> (john@email.com): "Please fix slot A3"</div> -->
+          </div>
+        </div>
+
+        <!-- Reviews -->
+        <div class="bg-white shadow rounded-lg p-4">
+          <h2 class="text-xl font-semibold mb-4">⭐ Reviews</h2>
+          <div class="space-y-4" id="review-list">
+            <!-- Example Static Entry -->
+            <!-- <div><p><b>Alice</b> - ⭐⭐⭐⭐⭐ "Great app!"</p></div> -->
+          </div>
+        </div>
+
+        <!-- Bookings -->
+        <div class="bg-white shadow rounded-lg p-4">
+          <h2 class="text-xl font-semibold mb-4">🚗 Bookings</h2>
+          <div class="space-y-4" id="bookings-list">
+            <!-- Example Static Entry -->
+            <!-- <div><b>Slot A1</b> by Bob, 10:00 - 11:00</div> -->
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+  // --- Firebase Config ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyAbP4ha6KeJZz3CLRF3mMjesxsMwi4ku-w",
+    authDomain: "smart-parking-system-3706c.firebaseapp.com",
+    databaseURL: "https://smart-parking-system-3706c-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "smart-parking-system-3706c",
+    storageBucket: "smart-parking-system-3706c.appspot.com",
+    messagingSenderId: "865604086970",
+    appId: "1:865604086970:web:eef7c292c097b2414f6683"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const ADMIN_EMAIL = "smartpark@gmail.com";
+
+  // Notification system
+  let notifCount = 0;
+  const notifBtn = document.getElementById("notif-btn");
+  const notifCountEl = document.getElementById("notif-count");
+  const notifDropdown = document.getElementById("notif-dropdown");
+  const notifList = document.getElementById("notif-list");
+
+  notifBtn.addEventListener("click", () => {
+    notifDropdown.classList.toggle("hidden");
+    notifCount = 0;
+    notifCountEl.textContent = "0";
+    notifCountEl.classList.add("hidden");
+  });
+
+  function addNotification(message) {
+    notifCount++;
+    notifCountEl.textContent = notifCount;
+    notifCountEl.classList.remove("hidden");
+    const div = document.createElement("div");
+    div.className = "border-b border-gray-200 py-2";
+    div.textContent = message;
+    notifList.prepend(div);
+  }
+
+  // --- Admin restriction ---
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = "auth.html";
+    } else if (user.email !== ADMIN_EMAIL) {
+      alert("Unauthorized access!");
+      auth.signOut();
+      window.location.href = "index.html";
+    } else {
+      loadBookings();
+      loadContactMessages();
+      loadReviews();
+    }
+  });
+
+  document.getElementById("logout-btn").onclick = () => auth.signOut().then(() => location.href="index.html");
+
+  // --- Load Bookings ---
+  function loadBookings() {
+    db.ref("bookings").on("child_added", snap => addNotification(`New booking in slot ${snap.key}`));
+    db.ref("bookings").on("value", snapshot => {
+      const data = snapshot.val() || {};
+      const bookingsList = document.getElementById("bookings-list");
+      bookingsList.innerHTML = "";
+      Object.keys(data).forEach(slot => {
+        const slotBookings = data[slot];
+        const slotDiv = document.createElement("div");
+        slotDiv.className = "border p-2 rounded";
+        let html = `<h3 class="font-bold">${slot}</h3>`;
+        if (slotBookings) {
+          Object.entries(slotBookings).forEach(([id, b]) => {
+            html += `<p>${b.name} (${b.vehicle}) | ${new Date(b.startTime).toLocaleTimeString()} - ${new Date(b.endTime).toLocaleTimeString()}</p>`;
+          });
+        } else {
+          html += `<p class="text-gray-500">No bookings</p>`;
+        }
+        slotDiv.innerHTML = html;
+        bookingsList.appendChild(slotDiv);
+      });
+    });
+  }
+
+  // --- Load Contact Messages ---
+  function loadContactMessages() {
+    db.ref("contact_messages").on("child_added", snap => {
+      const msg = snap.val();
+      addNotification(`New contact message from ${msg.name}`);
+      const div = document.createElement("div");
+      div.className = "border p-2 rounded";
+      div.innerHTML = `<b>${msg.name}</b> (${msg.email}): ${msg.message}`;
+      document.getElementById("contact-list").appendChild(div);
+    });
+  }
+
+  // --- Load Reviews ---
+  function loadReviews() {
+    db.ref("reviews").on("child_added", snap => {
+      const r = snap.val();
+      addNotification(`New review posted by ${r.user}`);
+      const div = document.createElement("div");
+      div.className = "border p-2 rounded";
+      div.innerHTML = `<b>${r.user}</b> - ⭐ ${r.rating}/5<br>${r.comment}`;
+      document.getElementById("review-list").appendChild(div);
+    });
+  }
+  </script>
+</body>
+</html>
